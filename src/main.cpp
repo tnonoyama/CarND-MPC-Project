@@ -91,6 +91,9 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+//          double v = j[1]["speed"] * 0.447; // MPH to m/s
+	  double steer_value = j[1]["steering_angle"];
+          double throttle_value = j[1]["throttle"];
 
 	  for (int i = 0; i < ptsx.size(); i++)
 	  {
@@ -112,16 +115,26 @@ int main() {
 
 	  auto coeffs = polyfit(ptsx_transform, ptsy_transform, 3);
 
-	  //calculate cte and epsi
-	  double cte = polyeval(coeffs, 0);
-	  //double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] * psw(px, 2));
-	  double epsi = -atan(coeffs[1]);
+          // latency is used to allow for latency in state calculation
+	  const double latency = .10;
 
-	  double steer_value = j[1]["steering_angle"];
-	  double throttle_value = j[1]["throttle"];
+          px = v * latency;
+
+	  const double Lf = 2.67;
+	  psi = - v * steer_value / Lf * latency;
+
+	  //calculate cte and epsi
+	  double cte = polyeval(coeffs, px);
+//	  double cte = polyeval(coeffs, 0);
+	  double epsi = psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] * pow(px, 2));
+//	  double epsi = -atan(coeffs[1]);
+
+//	  double steer_value = j[1]["steering_angle"];
+//	  double throttle_value = j[1]["throttle"];
 
 	  Eigen::VectorXd state(6);
-	  state << 0, 0, 0, v, cte, epsi;
+//	  state << 0, 0, 0, v, cte, epsi;
+	  state << px, 0, psi, v, cte, epsi;
 
 
           /*
@@ -183,10 +196,11 @@ int main() {
 //          msgJson["next_x"] = next_x_vals;
 //          msgJson["next_y"] = next_y_vals;
 
-	  double Lf = 2.67;
+//	  double Lf = 2.67;
 
           json msgJson;
-	  msgJson["steerting_angle"] = vars[0]/(deg2rad(25)*Lf);
+//	  msgJson["steerting_angle"] = vars[0]/(deg2rad(25)*Lf);
+          msgJson["steering_angle"] = vars[0]/deg2rad(25);
 	  msgJson["throttle"] = vars[1];
 
 	  msgJson["next_x"] = next_x_vals;
